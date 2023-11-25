@@ -1,2 +1,4 @@
 ﻿  Main.cpp
+D:\OpenGL_Project\VulkanProject\AssignmentVizExpert\Main.cpp(31,1): warning C4129: '	': unrecognized character escape sequence
+D:\OpenGL_Project\VulkanProject\AssignmentVizExpert\Main.cpp(55,20): warning C4018: '<': signed/unsigned mismatch
   AssignmentVizExpert.vcxproj -> D:\OpenGL_Project\VulkanProject\AssignmentVizExpert\Debug\AssignmentVizExpert.exe

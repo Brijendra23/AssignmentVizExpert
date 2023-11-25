@@ -3,6 +3,7 @@
 #include<gl/glew.h>
 #include <vector>
 #include"Utils.h"
+#include <gl/GL.h>
 class Calculation
 {
 public:

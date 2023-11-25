@@ -1,3 +1,5 @@
+#define STB_IMAGE_IMPLEMENTATION
+
 #include <stdio.h>
 #include <string.h>
 #include<GL/glew.h>
@@ -5,60 +7,69 @@
 
 #include"ReadFileCoord.h"
 #include"Calculation.h"
+#include"LoadTexture.h"
 
 
 // Window dimensions
 const GLint WIDTH = 1920, HEIGHT = 1080;
 
 GLuint VBO, VAO, shader;
-
+LoadTexture texture;
 // Vertex Shader code
 static const char* vShader = "                                                \n\
 #version 330                                                                  \n\
                                                                               \n\
 layout (location = 0) in vec3 pos;											  \n\
-                                                                              \n\
+layout (location = 1) in vec2 tex;											  \n\
+																				\n\
+out vec2 TexCoord;															\n\
+																				\n\
+																				\n\
 void main()                                                                   \n\
 {                                                                             \n\
-    gl_Position = vec4(0.4 * pos.x, 0.4 * pos.y, pos.z, 1.0);				  \n\
-}";
+    gl_Position = vec4(0.4 * pos.x, 0.4 * pos.y, pos.z, 1.0);				\n\
+	TexCoord =tex;															\n\																		}";	
 
 // Fragment Shader
 static const char* fShader = "                                                \n\
 #version 330                                                                  \n\
                                                                               \n\
+in vec2 TexCoord;																				\n\
+																				\n\
+																				\n\
 out vec4 colour;                                                               \n\
-                                                                              \n\
+uniform sampler2D theTexture;                                                                       \n\
 void main()                                                                   \n\
 {                                                                             \n\
-    colour = vec4(1.0, 0.0, 0.0, 1.0);                                         \n\
+    colour = texture(theTexture,TexCoord);//vec4(0.2f,0.0f,1.0f,1.0);                                        \n\
 }";
 
-void CreateTriangle()
+void CreateMesh()
 {
+	//Reading
 	ReadFileCoord cooord;
 	std::vector<Point> controlPoints = cooord.getPointsFromFile("coordinate/AssignmentPoint.txt");
 	Calculation vertexPoints;
-	
+	//Calculation of the vertices of the extrude geometry
 	std::vector<GLfloat> realVertex=vertexPoints.calculateSplineCoords(controlPoints[0], controlPoints[1], controlPoints[2], controlPoints[3],10);
-	const int sizeVector = realVertex.size();
-	GLfloat verticesSpline[1000];
-	for (int i = 0; i < sizeVector; i++)
+	for (int i = 0; i < realVertex.size(); i++)
 	{
-		verticesSpline[i] = realVertex[i];
-		std::cout << verticesSpline[i] << endl;
+		std::cout << realVertex[i] << endl;
 	}
 
 	
 	glGenVertexArrays(1, &VAO);
-	glBindVertexArray(VAO);
+	
 
 	glGenBuffers(1, &VBO);
+	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(verticesSpline), verticesSpline, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER,realVertex.size()*sizeof(float), realVertex.data(), GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,sizeof(realVertex[0])*4, 0);
 	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(realVertex[0]) * 4, (void*)(sizeof(realVertex[0])*2));
+	glEnableVertexAttribArray(1);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
@@ -177,8 +188,11 @@ int main()
 	// Setup Viewport size
 	glViewport(0, 0, bufferWidth, bufferHeight);
 
-	CreateTriangle();
+	CreateMesh();
 	CompileShaders();
+
+	//loading txture image
+	texture.LoadLoadTexture("Texture/wall.jpg");
 
 	// Loop until window closed
 	while (!glfwWindowShouldClose(mainWindow))
@@ -190,10 +204,12 @@ int main()
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		
 		glUseProgram(shader);
-
+		
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES_ADJACENCY,0,3);
+		texture.UseTexture();
+		glDrawArrays(GL_TRIANGLE_STRIP,0,3);
 		glBindVertexArray(0);
 
 		glUseProgram(0);
