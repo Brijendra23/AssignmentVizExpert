@@ -6,7 +6,7 @@
 *.lo
 *.o
 *.obj
-
+*.html
 # Precompiled Headers
 *.gch
 *.pch
