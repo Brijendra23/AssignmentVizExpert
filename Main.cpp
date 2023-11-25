@@ -34,30 +34,30 @@ void main()                                                                   \n
 static const char* fShader = "                                                \n\
 #version 330                                                                  \n\
                                                                               \n\
-in vec2 TexCoord;																				\n\
+in vec2 TexCoord;															   \n\
 																				\n\
 																				\n\
 out vec4 colour;                                                               \n\
-uniform sampler2D theTexture;                                                                       \n\
+uniform sampler2D theTexture;                                                  \n\
 void main()                                                                   \n\
 {                                                                             \n\
-    colour = texture(theTexture,TexCoord);//vec4(0.2f,0.0f,1.0f,1.0);                                        \n\
+    colour = texture(theTexture,TexCoord);//vec4(0.2f,0.0f,1.0f,1.0);         \n\
 }";
 
 void CreateMesh()
 {
-	//Reading
+	//Reading the control points from the ttext file
 	ReadFileCoord cooord;
 	std::vector<Point> controlPoints = cooord.getPointsFromFile("coordinate/AssignmentPoint.txt");
 	Calculation vertexPoints;
 	//Calculation of the vertices of the extrude geometry
-	std::vector<GLfloat> realVertex=vertexPoints.calculateSplineCoords(controlPoints[0], controlPoints[1], controlPoints[2], controlPoints[3],10);
+	std::vector<GLfloat> realVertex=vertexPoints.calculateSplineCoords(controlPoints[0], controlPoints[1], controlPoints[2], controlPoints[3],250);
 	for (int i = 0; i < realVertex.size(); i++)
 	{
 		std::cout << realVertex[i] << endl;
 	}
 
-	
+	//generation and binding of VAO/VBO
 	glGenVertexArrays(1, &VAO);
 	
 
@@ -66,6 +66,7 @@ void CreateMesh()
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER,realVertex.size()*sizeof(float), realVertex.data(), GL_STATIC_DRAW);
 
+	//How the each vertices are used for mesh and texture mapping
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,sizeof(realVertex[0])*4, 0);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(realVertex[0]) * 4, (void*)(sizeof(realVertex[0])*2));
@@ -78,6 +79,7 @@ void CreateMesh()
 
 void AddShader(GLuint theProgram, const char* shaderCode, GLenum shaderType)
 {
+	//creating shader program
 	GLuint theShader = glCreateShader(shaderType);
 
 	const GLchar* theCode[1];
@@ -85,7 +87,7 @@ void AddShader(GLuint theProgram, const char* shaderCode, GLenum shaderType)
 
 	GLint codeLength[1];
 	codeLength[0] = strlen(shaderCode);
-
+	//connecting the code and compiling
 	glShaderSource(theShader, 1, theCode, codeLength);
 	glCompileShader(theShader);
 
@@ -100,6 +102,7 @@ void AddShader(GLuint theProgram, const char* shaderCode, GLenum shaderType)
 		return;
 	}
 
+	//attaching the shader with the program
 	glAttachShader(theProgram, theShader);
 }
 
@@ -211,7 +214,7 @@ int main()
 		texture.UseTexture();
 		glDrawArrays(GL_TRIANGLE_STRIP,0,3);
 		glBindVertexArray(0);
-
+		
 		glUseProgram(0);
 
 		glfwSwapBuffers(mainWindow);

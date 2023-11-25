@@ -57,5 +57,5 @@ void LoadTexture::ClearTexture()
 
 LoadTexture::~LoadTexture()
 {
-
+	ClearTexture();
 }
