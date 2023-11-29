@@ -4,31 +4,47 @@
 #include <string.h>
 #include<GL/glew.h>
 #include<glfw/glfw3.h>
-
+#include <glm\glm.hpp>
+#include <glm\gtc\matrix_transform.hpp>
+#include <glm\gtc\type_ptr.hpp>
 #include"ReadFileCoord.h"
-#include"Calculation.h"
 #include"LoadTexture.h"
-
+#include"Window.h"
+#include"Camera.h"
 
 // Window dimensions
 const GLint WIDTH = 1920, HEIGHT = 1080;
-
+//window
+Window mainwindow;
+Camera camera;
 GLuint VBO, VAO, shader;
 LoadTexture texture;
+
+
+
+GLfloat deltaTime = 0.0f;
+GLfloat lastTime = 0.0f;
+
+
+
 // Vertex Shader code
-static const char* vShader = "                                                \n\
-#version 330                                                                  \n\
-                                                                              \n\
-layout (location = 0) in vec3 pos;											  \n\
-layout (location = 1) in vec2 tex;											  \n\
+static const char* vShader = "                                                  \n\
+#version 330                                                                    \n\
+                                                                                \n\
+layout (location = 0) in vec3 pos;											    \n\
+layout (location = 1) in vec2 tex;											    \n\
 																				\n\
-out vec2 TexCoord;															\n\
+out vec2 TexCoord;															    \n\
 																				\n\
+uniform mat4 model;                                                                      \n\
+uniform mat4 projection;                                                                                \n\
+uniform mat4 view;                                                                                \n\
+                                                                                \n\
 																				\n\
-void main()                                                                   \n\
-{                                                                             \n\
-    gl_Position = vec4(0.4 * pos.x, 0.4 * pos.y, pos.z, 1.0);				\n\
-	TexCoord =tex;															\n\																		}";	
+void main()                                                                     \n\
+{                                                                               \n\
+    gl_Position = projection*view*model* vec4(0.4 * pos.x, 0.4 * pos.y, pos.z, 1.0);				    \n\
+	TexCoord =tex;															    \n\																		}";	
 
 // Fragment Shader
 static const char* fShader = "                                                \n\
@@ -49,28 +65,30 @@ void CreateMesh()
 	//Reading the control points from the ttext file
 	ReadFileCoord cooord;
 	std::vector<Point> controlPoints = cooord.getPointsFromFile("coordinate/AssignmentPoint.txt");
-	Calculation vertexPoints;
-	//Calculation of the vertices of the extrude geometry
-	std::vector<GLfloat> realVertex=vertexPoints.calculateSplineCoords(controlPoints[0], controlPoints[1], controlPoints[2], controlPoints[3],250);
-	for (int i = 0; i < realVertex.size(); i++)
+	
+	/*for (int i = 0; i < controlPoints.size(); i++)
 	{
-		std::cout << realVertex[i] << endl;
+		std::cout << controlPoints[i].x << " " << controlPoints[i].y << std::endl;
+	}*/
+	//Calculation of the vertices of the extrude geometry
+	std::vector<GLfloat> realVertex=cooord.calculateSplineCoords(controlPoints[0], controlPoints[1], controlPoints[2], controlPoints[3],1000);
+	for (int i = 0; i < realVertex.size(); i+=2)
+	{
+		std::cout << realVertex[i]<<","<< realVertex[i+1] << endl;
 	}
 
 	//generation and binding of VAO/VBO
 	glGenVertexArrays(1, &VAO);
-	
+	glBindVertexArray(VAO);
+
 
 	glGenBuffers(1, &VBO);
-	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER,realVertex.size()*sizeof(float), realVertex.data(), GL_STATIC_DRAW);
 
 	//How the each vertices are used for mesh and texture mapping
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,sizeof(realVertex[0])*4, 0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,sizeof(realVertex[0])*2, 0);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(realVertex[0]) * 4, (void*)(sizeof(realVertex[0])*2));
-	glEnableVertexAttribArray(1);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
@@ -144,80 +162,59 @@ void CompileShaders()
 
 int main()
 {
-	// Initialise GLFW
-	if (!glfwInit())
-	{
-		printf("GLFW initialisation failed!");
-		glfwTerminate();
-		return 1;
-	}
-
-	// Setup GLFW window properties
-	// OpenGL version
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	// Core Profile
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	// Allow Forward Compatbility
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-
-	// Create the window
-	GLFWwindow* mainWindow = glfwCreateWindow(WIDTH, HEIGHT, "Test Window", NULL, NULL);
-	if (!mainWindow)
-	{
-		printf("GLFW window creation failed!");
-		glfwTerminate();
-		return 1;
-	}
-
-	// Get Buffer Size information
-	int bufferWidth, bufferHeight;
-	glfwGetFramebufferSize(mainWindow, &bufferWidth, &bufferHeight);
-
-	// Set context for GLEW to use
-	glfwMakeContextCurrent(mainWindow);
-
-	// Allow modern extension features
-	glewExperimental = GL_TRUE;
-
-	if (glewInit() != GLEW_OK)
-	{
-		printf("GLEW initialisation failed!");
-		glfwDestroyWindow(mainWindow);
-		glfwTerminate();
-		return 1;
-	}
-
-	// Setup Viewport size
-	glViewport(0, 0, bufferWidth, bufferHeight);
+	mainwindow = Window(800, 600);
+	mainwindow.Initialise();
+	
 
 	CreateMesh();
 	CompileShaders();
 
-	//loading txture image
-	texture.LoadLoadTexture("Texture/wall.jpg");
+	camera= Camera(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f, 0.50f, 0.1f);
 
+
+	//loading txture image
+	texture.LoadLoadTexture("Texture/brick.png");
+
+	GLuint uniformProjection = 0, uniformModel = 0, uniformView = 0;
+	glm::mat4 projection = glm::perspective(glm::radians(45.0f), (GLfloat) mainwindow.getBufferWidth() / mainwindow.getBufferHeight(), 0.1f, 100.0f);
 	// Loop until window closed
-	while (!glfwWindowShouldClose(mainWindow))
+	while (!mainwindow.getShouldClose())
 	{
+		GLfloat now = glfwGetTime(); // SDL_GetPerformanceCounter();
+		deltaTime = now - lastTime; // (now - lastTime)*1000/SDL_GetPerformanceFrequency();
+		lastTime = now;
 		// Get + Handle user input events
 		glfwPollEvents();
 
+
+		camera.keyControl(mainwindow.getsKeys(), deltaTime);
+		camera.mouseControl(mainwindow.getXChange(), mainwindow.getYChange());
+
+
+
 		// Clear window
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
 		
 		glUseProgram(shader);
-		
+		uniformModel = glGetUniformLocation(shader, "model");
+		uniformProjection = glGetUniformLocation(shader, "projection");
+		uniformView = glGetUniformLocation(shader, "view");
+		glm::mat4 model(1.0f);
+
+		model = glm::translate(model, glm::vec3(0.0f, 0.0f, -2.5f));
+		model = glm::scale(model, glm::vec3(0.010f, 0.010f, 0.01f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		glUniformMatrix4fv(uniformProjection, 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(uniformView, 1, GL_FALSE, glm::value_ptr(camera.calculateViewMatrix()));
 		glBindVertexArray(VAO);
 		texture.UseTexture();
-		glDrawArrays(GL_TRIANGLE_STRIP,0,3);
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 3);
 		glBindVertexArray(0);
 		
 		glUseProgram(0);
-
-		glfwSwapBuffers(mainWindow);
+		mainwindow.swapBuffers();
 	}
 
 	return 0;
